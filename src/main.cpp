@@ -3,8 +3,6 @@
 // Legacy library for the temperature sensor
 #include "driver/temp_sensor.h"
 
-#include "WiFi.h"
-
 #include <Wire.h>
 
 #define SDA_PIN 5
@@ -31,7 +29,7 @@ void initTempSensor()
 
 void setup()
 {
-  // Serial.begin(115200);
+  Serial.begin(115200);
 
   pinMode(PIN_LED, OUTPUT);
   pinMode(PIN_BUTTON, INPUT);
@@ -46,9 +44,6 @@ void setup()
 
   initTempSensor();
 
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-
   delay(100);
 }
 
@@ -56,97 +51,21 @@ char buffer[5];
 
 void loop()
 {
+  // Read temperature and convert it to const char*
+  float temp_celsius = 0;
+  temp_sensor_read_celsius(&temp_celsius);
+  snprintf(buffer, sizeof(buffer), "%.0f", temp_celsius);
+  const char *buffer_c = buffer;
 
-  if (((millis() / 1000) % 5) < 2)
+  u8g2.clearBuffer();
+  drawText(buffer_c);
+  u8g2.sendBuffer();
+
+  digitalWrite(PIN_LED, digitalRead(PIN_BUTTON));
+
+  if ((millis() / 100) % 10 == 0)
   {
-    // Read temperature and convert it to const char*
-    float temp_celsius = 0;
-    temp_sensor_read_celsius(&temp_celsius);
-    snprintf(buffer, sizeof(buffer), "%.0f", temp_celsius);
-    const char *buffer_c = buffer;
-
-    u8g2.clearBuffer();
-    drawText(buffer_c);
-    u8g2.sendBuffer();
-
-    digitalWrite(PIN_LED, digitalRead(PIN_BUTTON));
-  }
-  else
-  {
-    // WiFi.scanNetworks will return the number of networks found.
-    int n = WiFi.scanNetworks();
-
-    snprintf(buffer, sizeof(buffer), "%d", n);
-    
-    u8g2.clearBuffer();
-    drawText(buffer);
-    u8g2.sendBuffer();
-
-    digitalWrite(PIN_LED, digitalRead(PIN_BUTTON));
-
-#if 0
-    // Serial.println("Scan done");
-    if (n == 0)
-    {
-      // Serial.println("no networks found");
-    }
-    else
-    {
-      Serial.print(n);
-      Serial.println(" networks found");
-      Serial.println("Nr | SSID                             | RSSI | CH | Encryption");
-      for (int i = 0; i < n; ++i)
-      {
-        // Print SSID and RSSI for each network found
-        Serial.printf("%2d", i + 1);
-        Serial.print(" | ");
-        Serial.printf("%-32.32s", WiFi.SSID(i).c_str());
-        Serial.print(" | ");
-        Serial.printf("%4d", WiFi.RSSI(i));
-        Serial.print(" | ");
-        Serial.printf("%2d", WiFi.channel(i));
-        Serial.print(" | ");
-        switch (WiFi.encryptionType(i))
-        {
-        case WIFI_AUTH_OPEN:
-          Serial.print("open");
-          break;
-        case WIFI_AUTH_WEP:
-          Serial.print("WEP");
-          break;
-        case WIFI_AUTH_WPA_PSK:
-          Serial.print("WPA");
-          break;
-        case WIFI_AUTH_WPA2_PSK:
-          Serial.print("WPA2");
-          break;
-        case WIFI_AUTH_WPA_WPA2_PSK:
-          Serial.print("WPA+WPA2");
-          break;
-        case WIFI_AUTH_WPA2_ENTERPRISE:
-          Serial.print("WPA2-EAP");
-          break;
-        case WIFI_AUTH_WPA3_PSK:
-          Serial.print("WPA3");
-          break;
-        case WIFI_AUTH_WPA2_WPA3_PSK:
-          Serial.print("WPA2+WPA3");
-          break;
-        case WIFI_AUTH_WAPI_PSK:
-          Serial.print("WAPI");
-          break;
-        default:
-          Serial.print("unknown");
-        }
-        Serial.println();
-        delay(10);
-      }
-    }
-    Serial.println("");
-#endif
-
-    // Delete the scan result to free memory for code below.
-    WiFi.scanDelete();
+    Serial.println(buffer);
   }
 
   delay(100);
