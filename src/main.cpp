@@ -18,18 +18,12 @@ void drawText(const char *text)
   u8g2.drawStr(0, 0, text);
 }
 
-// Initialize the temperature sensor
-void initTempSensor()
-{
-  temp_sensor_config_t temp_sensor = TSENS_CONFIG_DEFAULT();
-  temp_sensor.dac_offset = TSENS_DAC_L2;
-  temp_sensor_set_config(temp_sensor);
-  temp_sensor_start();
-}
+unsigned long lastFrameMillis;
+unsigned long movingAverageFrameMillis;
 
 void setup()
 {
-  Serial.begin(115200);
+  // Serial.begin(115200);
 
   pinMode(PIN_LED, OUTPUT);
   pinMode(PIN_BUTTON, INPUT);
@@ -42,31 +36,31 @@ void setup()
   u8g2.setDrawColor(1);
   u8g2.setFontPosTop();
 
-  initTempSensor();
+  lastFrameMillis = millis();
 
   delay(100);
 }
 
-char buffer[5];
+char buffer[16];
 
 void loop()
 {
-  // Read temperature and convert it to const char*
-  float temp_celsius = 0;
-  temp_sensor_read_celsius(&temp_celsius);
-  snprintf(buffer, sizeof(buffer), "%.0f", temp_celsius);
-  const char *buffer_c = buffer;
 
-  u8g2.clearBuffer();
-  drawText(buffer_c);
-  u8g2.sendBuffer();
+  unsigned long currentFrameMillis = millis();
+  unsigned long deltaFrameMillis = currentFrameMillis - lastFrameMillis;
+  movingAverageFrameMillis -= movingAverageFrameMillis>>3;
+  movingAverageFrameMillis += deltaFrameMillis;
+  lastFrameMillis = currentFrameMillis;
 
-  digitalWrite(PIN_LED, digitalRead(PIN_BUTTON));
+  unsigned long fps = 1000/movingAverageFrameMillis;
 
-  if ((millis() / 100) % 10 == 0)
+  if(currentFrameMillis%1000 == 0)
   {
-    Serial.println(buffer);
+    snprintf(buffer, sizeof(buffer), "%d", fps);
+    u8g2.clearBuffer();
+    drawText(buffer);
+    u8g2.sendBuffer();
   }
 
-  delay(100);
+  digitalWrite(PIN_LED, digitalRead(PIN_BUTTON));
 }
